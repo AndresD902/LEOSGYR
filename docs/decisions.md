@@ -32,6 +32,7 @@
 | ADR-020 | File storage: S3-compatible with presigned URLs        | Accepted |
 | ADR-021 | Git workflow: Git Flow adapted + Conventional Commits  | Accepted |
 | ADR-022 | Genealogy queries: PostgreSQL recursive CTEs           | Accepted |
+| ADR-023 | Hosting target: Railway for staging and Year 1 prod    | Accepted |
 
 ---
 
@@ -621,11 +622,65 @@ Use PostgreSQL **`WITH RECURSIVE`** CTEs in raw SQL (parameterized via `Prisma.s
 
 ---
 
+## ADR-023 — Hosting target: Railway for staging and Year 1 production
+
+### Context
+
+Phase 0 cannot proceed past CI/CD and staging provisioning until the hosting target is chosen. The system requires:
+
+- Node.js 20.11+ runtime.
+- Managed PostgreSQL 16 with PostGIS extension support.
+- Managed Redis 7.
+- S3-compatible object storage (or AWS S3 / Cloudflare R2 directly).
+- HTTPS / TLS termination.
+- Environment-variable secrets management.
+- Backups: RTO ≤ 4 h, RPO ≤ 1 h.
+- Low-latency for Colombian users (LATAM region preferred).
+- Compatibility with Ley 1581 de Protección de Datos Personales (Colombia).
+- Operational simplicity for a small team (2–4 engineers).
+
+### Decision
+
+Use **Railway** as the hosting target for staging and Year 1 production. Railway provides managed PostgreSQL, managed Redis, GitHub-integrated deployments, environment management, and previews — all with minimal operational overhead. The São Paulo region offers low-latency access for Colombian users.
+
+For object storage, use **Cloudflare R2** (S3-compatible API, no egress fees, separate from Railway). MinIO is used in local dev; R2 is the production target.
+
+### Alternatives Considered
+
+- **Fly.io**: viable alternative with multi-region support and a São Paulo region. Slightly steeper learning curve for managed PostgreSQL setup. Reconsidered as a migration target if Railway pricing becomes prohibitive at 50+ tenants.
+- **AWS ECS + RDS**: maximum control and explicit data residency, but operationally heavy for the initial team size. Reserved as a Year 2+ migration target if scale demands it.
+- **Vercel + Neon**: excellent for Next.js, but a long-running NestJS backend on serverless functions is awkward (cold starts, timeouts, queue worker constraints). Rejected for the backend; could be reconsidered for the frontend layer alone if Railway underperforms on web delivery.
+
+### Consequences
+
+- ✅ Fastest time to a working staging environment.
+- ✅ Managed PostgreSQL and Redis remove operational burden.
+- ✅ Preview environments per PR enable safer deploys.
+- ✅ R2 separates storage cost from compute and avoids egress fees.
+- ⚠️ Pricing scales with usage; quarterly review is required to forecast cost growth.
+- ⚠️ Vendor-coupling at the hosting layer — mitigated by keeping the application provider-agnostic (Docker images, env-driven config, S3-compatible storage abstraction).
+- ⚠️ Migration to Fly.io or AWS in the future requires re-creating the deployment topology but **not** rewriting the application; this is acceptable.
+
+### Migration triggers (when to revisit)
+
+This decision is revisited if any of the following occur:
+
+- Total tenants exceed **50** and Railway monthly cost exceeds the project's hosting budget.
+- A regulatory requirement mandates Colombian data residency that Railway cannot satisfy.
+- Operational incidents related to Railway availability exceed 2 in a quarter.
+
+### Status
+
+**Accepted** — 2026-05-02. First implementation in Phase 0 §3.12.
+
+---
+
 ## Decision Log
 
 | Date       | ADR     | Author     | Notes                                       |
 | ---------- | ------- | ---------- | ------------------------------------------- |
 | 2026-05-02 | 001-022 | Architect  | Initial set of decisions for project kickoff |
+| 2026-05-02 | 023     | Architect  | Hosting target chosen: Railway + Cloudflare R2 |
 
 ---
 

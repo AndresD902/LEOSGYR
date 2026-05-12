@@ -1,12 +1,14 @@
 # Data Model — CattlePro
 
-> **Status:** Draft v1.1
-> **Last updated:** 2026-05-02
+> **Status:** Draft v1.2
+> **Last updated:** 2026-05-07
 > **Owner:** Architecture & Backend
 >
 > This document is the **canonical specification of the data model**. It defines every entity, every attribute, every relationship, every index, and every business invariant that the system must enforce. Any code that touches the database — schemas, migrations, repositories, services — must conform to this document. If reality and this document diverge, this document is updated first; code follows.
 >
 > The companion file `apps/api/prisma/schema.prisma` is the executable form of this specification. Both must stay in sync.
+>
+> **Changelog v1.2 (2026-05-07):** Added `CANCELLED_CORRECTION` to `PregnancyOutcome` enum (used by REPRODUCTION.04 for record corrections). Added `ANIMAL_DEATH_LOSS` as a first-class value in `FinancialTransactionType` (replaces the v1.1 pattern of `OTHER_EXPENSE` + `metadata.deathLoss = true`). Both changes align `dataModel.md` with `features.md` REPRODUCTION.04 and FINANCE.01.
 >
 > **Changelog v1.1:** Aligned with `businessRules.md`. Default currency changed to COP. Added `BreedComposition`, `SemenStraw`, `LactationPeriod`, `MedicationWithholdingPeriod`, `MastitisHistory`, `BirthInterval`, and `CalfRearingCost` entities. Animal status transitions expanded (`PREGNANT → DRY` allowed). Pregnancy gestation refined to 279–283 days. `PregnancyOutcome` simplified to three values. CalfProfile renamed `TRANSITIONED_TO_ADULT` to `PROMOTED` and added `isBullCandidate`. MilkProductionRecord gained `isFitForCommercial`, `withholdingPeriodId`, and milking-mode awareness. Farm gained `milkingMode` and `timezone`. Reproductive efficiency, lactation, and mastitis tracking added.
 
@@ -907,12 +909,12 @@ A monetary movement attributed to the tenant, optionally to a specific farm and 
 - `occurredOn ≤ today`.
 - `direction` is derived from `type` at validation time:
   - INCOME types: `ANIMAL_SALE`, `MILK_SALE`, `OTHER_INCOME`.
-  - EXPENSE types: `ANIMAL_PURCHASE`, `FEED_PURCHASE`, `MEDICATION_PURCHASE`, `VETERINARY_SERVICE`, `SEMEN_PURCHASE`, `OTHER_EXPENSE`.
+  - EXPENSE types: `ANIMAL_PURCHASE`, `ANIMAL_DEATH_LOSS`, `FEED_PURCHASE`, `MEDICATION_PURCHASE`, `VETERINARY_SERVICE`, `SEMEN_PURCHASE`, `OTHER_EXPENSE`.
 - A tenant operates in a single currency in v1.0.
-- When `type ∈ { ANIMAL_PURCHASE, ANIMAL_SALE }`, `animalId` should be set.
+- When `type ∈ { ANIMAL_PURCHASE, ANIMAL_SALE, ANIMAL_DEATH_LOSS }`, `animalId` should be set.
 - **Sale vs. death distinction (per `businessRules.md` §7.2):**
   - `ANIMAL_SALE`: `direction = INCOME`. Triggered when an OWNER sets `Animal.status = SOLD` and provides a sale amount.
-  - `ANIMAL_DEATH_LOSS` (added type): `direction = EXPENSE`. Auto-suggested when `Animal.status = DECEASED`, with `amount = animal.estimatedValue` (override permitted). Recorded as `OTHER_EXPENSE` with `metadata.deathLoss = true`.
+  - `ANIMAL_DEATH_LOSS`: `direction = EXPENSE`. Auto-suggested when `Animal.status = DECEASED`, with `amount = animal.estimatedValue` (override permitted). The dedicated enum value (rather than `OTHER_EXPENSE` with metadata) keeps financial reports clean — death losses appear as a first-class line, not buried in "Other".
 - Reversals are new transactions with opposite `direction` and a `metadata.reverses` field referencing the original.
 
 ### 10.2 `CalfRearingCost`
@@ -1050,10 +1052,14 @@ PROMOTED   - Promoted to adult; CowProfile or BullProfile created.
 ### 12.6 `PregnancyOutcome`
 
 ```
-PENDING        - In progress.
-SUCCESSFUL     - Live birth, calf created.
-ABORTION       - Pregnancy lost.
-COMPLICATIONS  - Medical complications without successful birth (includes stillbirth).
+PENDING               - In progress.
+SUCCESSFUL            - Live birth, calf created.
+ABORTION              - Pregnancy lost.
+COMPLICATIONS         - Medical complications without successful birth (includes stillbirth).
+CANCELLED_CORRECTION  - Record was created in error and is being canceled. Excluded from
+                        "previous adverse event" detection — the next pregnancy does NOT
+                        require the post-adverse-event mandatory acknowledgement.
+                        Used by REPRODUCTION.04 for record corrections.
 ```
 
 ### 12.7 `HealthEventType`
@@ -1080,6 +1086,10 @@ OTHER_INCOME
 Expense types:
 ```
 ANIMAL_PURCHASE
+ANIMAL_DEATH_LOSS    - Loss of an animal asset due to death (terminal status DECEASED).
+                       Distinct from ANIMAL_SALE so financial reports separate sale revenue
+                       from death-loss expenses cleanly. Auto-suggested by ANIMALS.06 when
+                       an animal is transitioned to DECEASED, with amount = estimatedValue.
 FEED_PURCHASE
 MEDICATION_PURCHASE
 VETERINARY_SERVICE
@@ -1222,7 +1232,7 @@ Every domain query filters by `tenantId`. The `tenantId` is derived from the aut
 - All monetary values use `DECIMAL`. No floats. Ever.
 - Amounts are positive; direction lives in `direction`/`type`.
 - All transactions of a tenant share a single currency in v1.0. Default `COP`.
-- `ANIMAL_SALE` is income; animal death is recorded as `OTHER_EXPENSE` with `metadata.deathLoss = true`.
+- `ANIMAL_SALE` is income; animal death is recorded as `ANIMAL_DEATH_LOSS` (a dedicated expense type, not `OTHER_EXPENSE`).
 
 ### 13.6 Soft-delete & terminal states
 

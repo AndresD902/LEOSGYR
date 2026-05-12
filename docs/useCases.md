@@ -259,7 +259,7 @@ The OWNER has the broadest access: full read and write on the operational, finan
    - To `DRY` → `effectiveDate` (defaults to today).
    - To `QUARANTINED` → `reason`.
    - To `SOLD` → sale amount → triggers `FinancialTransaction` of type `ANIMAL_SALE`.
-   - To `DECEASED` → `exitReason` → auto-suggests `OTHER_EXPENSE` of `metadata.deathLoss = true` with `amount = estimatedValue` (override permitted).
+   - To `DECEASED` → `exitReason` → auto-suggests `FinancialTransaction` of type `ANIMAL_DEATH_LOSS` with `amount = estimatedValue` (override permitted).
 4. The system performs the transition (→ `ANIMALS.06`).
 
 **Alternative flows:**
@@ -1216,7 +1216,7 @@ A mastitis case end-to-end.
 
 1. **EMPLOYEE:** Notices a cow died overnight.
 2. **OWNER (UC.OWNER.06):** Transitions cow to `DECEASED` with reason "muerte natural súbita".
-3. **System:** Auto-suggests a `OTHER_EXPENSE` financial transaction with `metadata.deathLoss = true` and `amount = estimatedValue`. OWNER confirms.
+3. **System:** Auto-suggests a `FinancialTransaction` of type `ANIMAL_DEATH_LOSS` with `amount = estimatedValue`. OWNER confirms.
 4. **AUDITOR (UC.AUDITOR.02):** At year-end, sees the death loss as a separate line in the financial summary, distinct from sales.
 
 ---
