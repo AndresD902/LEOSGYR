@@ -1,0 +1,11 @@
+{
+  "name": "@leosgyr/config-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo \"No lint needed for config package\"",
+    "type-check": "echo \"No type-check needed for config package\"",
+    "build": "echo \"No build needed for config package\"",
+    "test": "echo \"No tests needed for config package\""
+  }
+}

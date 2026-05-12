@@ -1,0 +1,16 @@
+{
+  "name": "@leosgyr/config-eslint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "./index.js",
+  "scripts": {
+    "lint": "echo \"No lint needed for config package\"",
+    "type-check": "echo \"No type-check needed for config package\"",
+    "build": "echo \"No build needed for config package\"",
+    "test": "echo \"No tests needed for config package\""
+  },
+  "peerDependencies": {
+    "eslint": "9.12.0"
+  }
+}
