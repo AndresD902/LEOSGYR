@@ -219,9 +219,10 @@ Every task references a feature ID from `features.md` when applicable (e.g., `�
 
 ### 3.12 Hosting decision
 
-- ⬜ Resolve `projectbrief.md` open question #2 (managed PostgreSQL provider).
-- ⬜ Resolve hosting target (Railway / Fly.io / AWS — see `techContext.md` §17).
-- ⬜ Provision staging environment.
+- 🟩 Resolve `projectbrief.md` open question #2 (managed PostgreSQL provider) — **Railway** chosen, see `decisions.md` ADR-023.
+- 🟩 Resolve hosting target — **Railway + Cloudflare R2** for object storage, see ADR-023.
+- ⬜ Provision staging environment on Railway.
+- ⬜ Provision Cloudflare R2 bucket for animal photos.
 
 **Phase 0 Done When:**
 

@@ -411,7 +411,7 @@ This matrix is the authoritative source for role permissions. Implementation in 
 | #  | Question                                                                       | Phase to resolve | Owner    |
 | -- | ------------------------------------------------------------------------------ | ---------------- | -------- |
 | 1  | Final pricing tiers in COP and free-trial duration                             | Phase 1          | Product  |
-| 2  | Hosting provider for managed PostgreSQL (Neon, Supabase, RDS, Railway)         | Phase 0          | DevOps   |
+| 2  | ~~Hosting provider for managed PostgreSQL (Neon, Supabase, RDS, Railway)~~ ✅ **Resolved 2026-05-07: Railway + Cloudflare R2 (see ADR-023)** | Resolved | DevOps   |
 | 3  | Payment processor — MercadoPago for COP, Stripe for international, both?       | Phase 3          | Product  |
 | 4  | Email provider (Resend, Postmark, SES)                                         | Phase 2          | DevOps   |
 | 5  | Should we expose a separate vet-facing landing experience or share the same UI? | Phase 1          | Design   |

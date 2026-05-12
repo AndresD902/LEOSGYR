@@ -835,7 +835,7 @@ DECEASED    → (terminal)
   - Auto-marks the cow's open `LactationPeriod.dryOffDate = effectiveDate` if one exists.
 - `→ QUARANTINED`: future milk records will be auto-flagged unfit.
 - `→ SOLD`: requires a sale `FinancialTransaction` of type `ANIMAL_SALE` with the sale amount. The system suggests the animal's `estimatedValue`. `exitDate = effectiveDate`, `exitReason` populated.
-- `→ DECEASED`: requires `exitReason`. Auto-generates a `FinancialTransaction` of type `OTHER_EXPENSE` with `metadata.deathLoss = true` and `amount = estimatedValue` (override permitted). `exitDate = effectiveDate`.
+- `→ DECEASED`: requires `exitReason`. Auto-generates a `FinancialTransaction` of type `ANIMAL_DEATH_LOSS` with `amount = estimatedValue` (override permitted). `exitDate = effectiveDate`.
 - `→ PREGNANT`: not invoked directly by this endpoint. Use REPRODUCTION.01 (register pregnancy) which transitions automatically.
 
 **Errors:**
@@ -1199,10 +1199,10 @@ When a pregnancy was registered in error (e.g., wrong cow, wrong date), an OWNER
 
 **Business rules:**
 
-- The pregnancy is marked with a special outcome `CANCELLED_CORRECTION` (added to enum). It is excluded from "previous adverse event" detection (the next pregnancy does not require the post-adverse acknowledgement).
+- The pregnancy is marked with the outcome `CANCELLED_CORRECTION` (defined in `dataModel.md` §12.6). It is excluded from "previous adverse event" detection — the next pregnancy attempt for this cow does **not** require the post-adverse-event mandatory acknowledgement.
 - Mother's status returns to `previousStatus`.
 - If a `semenStrawId` was assigned, the straw's `quantityAvailable += 1` is restored.
-- The cancellation is loud in the audit log.
+- The cancellation is loud in the audit log (`pregnancy.cancel_correction` action with the user-provided `reason`).
 
 **Audit:** `pregnancy.cancel_correction` with reason.
 
@@ -1726,7 +1726,7 @@ Financial transactions and per-animal cost basis.
 - For `type = ANIMAL_SALE`, the animal's `status` must subsequently transition to `SOLD` (this endpoint does not auto-transition; ANIMALS.06 does).
 
 **Special case — animal death:** This module also handles the auto-suggestion when an animal is marked `DECEASED`:
-- ANIMALS.06 (status change to `DECEASED`) auto-creates a `FinancialTransaction` of type `OTHER_EXPENSE` with `metadata.deathLoss = true`, `amount = animal.estimatedValue` (override permitted), `description = "Pérdida de activo: [reason]"`.
+- ANIMALS.06 (status change to `DECEASED`) auto-creates a `FinancialTransaction` of type `ANIMAL_DEATH_LOSS` (a first-class enum value, not `OTHER_EXPENSE` with metadata), with `amount = animal.estimatedValue` (override permitted), `description = "Pérdida de activo: [reason]"`. This keeps death losses as a clean, dedicated line in profitability reports — distinct from genuine "other" expenses.
 
 **Errors:**
 
@@ -1742,7 +1742,7 @@ Financial transactions and per-animal cost basis.
 
 ### FINANCE.02 — List transactions
 
-Filters: `farmId`, `type[]`, `direction`, `animalId`, `from`, `to`, `recordedBy`, `metadata.deathLoss`. Sort by `occurredOn DESC` default.
+Filters: `farmId`, `type[]`, `direction`, `animalId`, `from`, `to`, `recordedBy`. Sort by `occurredOn DESC` default. To filter for animal deaths specifically, use `type=ANIMAL_DEATH_LOSS` (cleaner than the v1.1 metadata-based filter).
 
 ---
 

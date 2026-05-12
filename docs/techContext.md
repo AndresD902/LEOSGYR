@@ -664,33 +664,37 @@ Local dev does not need K8s. Production deployment may use K8s (open question, s
 
 ### 17.1 Hosting
 
-The production hosting target is an **open question** (per `projectbrief.md` §12 #2). Candidates:
+The production hosting target is **Railway** (resolved 2026-05-07 via `decisions.md` ADR-023). For object storage, **Cloudflare R2** is used in production; **MinIO** is used in local development.
 
-| Provider          | Pros                                                          | Cons                                                  |
-| ----------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
-| **Railway**       | Simplest; managed PG and Redis; preview environments.         | Less control; pricing scales fast.                    |
-| **Fly.io**        | Multi-region; managed PG; close to LATAM users (LAX, GRU).    | Steeper learning curve.                               |
-| **AWS ECS + RDS** | Full control; Colombian data residency via São Paulo region.  | Most operational overhead.                            |
-| **Vercel + Neon** | Easiest for Next.js; serverless PG.                           | Backend-only deployments harder; cold starts.         |
+| Concern              | Provider           |
+| -------------------- | ------------------ |
+| Backend (NestJS)     | Railway            |
+| Frontend (Next.js)   | Railway            |
+| PostgreSQL 16        | Railway managed    |
+| Redis 7              | Railway managed    |
+| Object storage       | Cloudflare R2      |
+| Local dev storage    | MinIO              |
+| Email                | TBD (Phase 2 — Resend / Postmark / SES) |
 
-The architecture is provider-agnostic. The decision will be made before Phase 0 ends, based on:
-
-- Compatibility with Colombian data residency (Ley 1581).
-- Operational complexity vs. team size.
-- Cost at projected pilot scale.
+> **Migration triggers:** the team revisits the hosting decision if (a) total tenants exceed 50 and Railway's monthly cost exceeds the hosting budget, (b) a regulatory requirement mandates Colombian data residency Railway cannot satisfy, or (c) operational incidents related to Railway availability exceed 2 in a quarter. Migration candidates: **Fly.io** (São Paulo region, multi-region failover) and **AWS ECS + RDS** (full control, explicit data residency in São Paulo).
 
 ### 17.2 Hosting requirements
 
-The chosen provider must support:
+The chosen provider satisfies these baseline requirements:
 
-- Node.js 20.11+ runtime.
-- PostgreSQL 16 (managed preferred; self-hosted acceptable).
-- Redis 7 (managed preferred).
-- S3-compatible object storage (or AWS S3, Cloudflare R2 directly).
-- HTTPS / TLS termination.
-- Environment-variable secrets management.
-- Persistent volumes for backups.
-- Network egress sufficient for image hosting and email.
+- ✅ Node.js 20.11+ runtime.
+- ✅ Managed PostgreSQL 16 with PostGIS extension support.
+- ✅ Managed Redis 7.
+- ✅ HTTPS / TLS termination.
+- ✅ Environment-variable secrets management.
+- ✅ GitHub-integrated automated deployments.
+- ✅ Preview environments per pull request.
+- ✅ São Paulo region for low-latency LATAM access.
+
+External (handled outside Railway):
+
+- ✅ S3-compatible object storage — Cloudflare R2.
+- ⬜ Backups (in-progress per §17.3 below — Railway provides daily snapshots; long-term WAL-shipping setup is pending).
 
 ### 17.3 Backup policy (operational target)
 

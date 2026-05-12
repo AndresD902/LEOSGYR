@@ -1,8 +1,8 @@
 # Active Context — CattlePro
 
-> **Status:** Initial state — Phase 0 not yet started
-> **Last updated:** 2026-05-02
-> **Updated by:** Architecture (initial documentation set)
+> **Status:** Phase 0 unblocked — hosting resolved, ready for monorepo initialization
+> **Last updated:** 2026-05-07
+> **Updated by:** Architecture (after agent feedback and three blocking decisions)
 >
 > **This is the first document you read when retaking a session.** It captures **where the work is right now, what just happened, what is next, and what context to load before doing anything**. Everything else in the documentation describes the project; this describes *the moment*.
 >
@@ -64,21 +64,29 @@ Same order. The document was written for both.
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | **Current phase**          | Phase 0 — Foundations                                                                  |
 | **Current sprint**         | N/A — sprint 1 not started                                                             |
-| **Active focus**           | Documentation set complete; awaiting kickoff of Phase 0 implementation                |
-| **Codebase status**        | Empty — no `apps/` or `packages/` directories yet beyond what was scaffolded for review |
+| **Active focus**           | Hosting resolved (Railway). Three doc inconsistencies fixed. **Ready to initialize the monorepo.** |
+| **Codebase status**        | Empty — no `apps/` or `packages/` directories yet                                       |
 | **Pilot farms onboarded**  | 0 (target Phase 1: 1; Phase 2: 3)                                                       |
 | **Production deployments** | 0                                                                                       |
-| **Staging deployments**    | 0                                                                                       |
+| **Staging deployments**    | 0 (Railway target chosen; provisioning pending)                                         |
 | **Open P0/P1 incidents**   | 0                                                                                       |
 | **Last CI green commit**   | n/a                                                                                     |
 
-> **Where we are in plain language:** the architectural and product foundations are documented. Eleven documents have been written that fully specify the system at the level of detail an agent needs to start building without inventing decisions. The next step is to kick off **Phase 0 — Foundations** by initializing the monorepo and wiring up the production-ready skeleton (no domain features yet).
+> **Where we are in plain language:** the documentation is complete and internally consistent. The hosting decision is resolved (Railway + Cloudflare R2 — `decisions.md` ADR-023). Three documentation inconsistencies surfaced by the IA agent during plan review have been fixed: `CANCELLED_CORRECTION` and `ANIMAL_DEATH_LOSS` are now first-class enum values in `dataModel.md`, and all references across `features.md` and `useCases.md` are aligned. **The next step is to initialize the monorepo (Phase 0 §3.1).**
 
 ---
 
 ## 3. Recently Completed
 
 > What has been finished in roughly the last week. Items here are also reflected in `progress.md` if they involve code; this section is broader and includes documentation, decisions, and operational tasks.
+
+### Resolutions (2026-05-07)
+
+After the IA programming agent reviewed the documentation and proposed a development plan, three blocking items surfaced. All three were resolved by the owner:
+
+- ✅ **ADR-023: Hosting target = Railway + Cloudflare R2** — added to `decisions.md`. Resolves `projectbrief.md` open question #2 and unblocks the staging deployment workflow. Migration triggers documented.
+- ✅ **`CANCELLED_CORRECTION` added to `PregnancyOutcome` enum** in `dataModel.md` §12.6. Aligns with `features.md` REPRODUCTION.04 which had been referencing this value without it being formally defined.
+- ✅ **`ANIMAL_DEATH_LOSS` added as a first-class value in `FinancialTransactionType`** in `dataModel.md` §12.8. Replaces the v1.1 pattern of `OTHER_EXPENSE + metadata.deathLoss = true`. All references updated in `features.md` (FINANCE.01, FINANCE.02, ANIMALS.06) and `useCases.md` (UC.OWNER.06, UC.CROSS.04). `dataModel.md` is now v1.2.
 
 ### Documentation foundation (2026-05-02)
 
@@ -121,24 +129,9 @@ Same order. The document was written for both.
 
 > The next 1–3 things to pick up. Items are listed in **priority order**. The top item is what the next agent or developer should start with unless instructed otherwise.
 
-### Priority 1 — Resolve hosting decision
+### Priority 1 — Initialize the monorepo
 
-**Why now:** Phase 0 §3.12 requires the hosting target to be chosen before staging is provisioned. Several deployment artifacts (Dockerfile, GitHub Actions deploy workflow, env-var schema) depend on this choice.
-
-**What to do:**
-
-1. Review the four candidates in `techContext.md` §17.1 (Railway, Fly.io, AWS ECS+RDS, Vercel+Neon).
-2. Decide based on the criteria listed there: Colombian data residency support (Ley 1581), team operational capacity, projected pilot cost.
-3. Document the decision as a new ADR in `decisions.md` (likely ADR-023).
-4. Update `techContext.md` §17 to mark the open question resolved.
-
-**Decision deadline:** before Phase 0 ends. Until resolved, scaffold work that doesn't depend on the host (monorepo, tooling, schema, modules) can proceed.
-
-**Owner:** Architecture / DevOps.
-
-### Priority 2 — Initialize the monorepo
-
-**Why now:** Phase 0 §3.1 is the prerequisite for everything. No code can be written meaningfully until the workspace is set up correctly.
+**Why now:** Phase 0 §3.1 is the prerequisite for everything. With the hosting decision resolved (Railway + Cloudflare R2), the monorepo can be initialized and CI workflows can target Railway in the same PR if desired.
 
 **What to do:**
 
@@ -155,16 +148,16 @@ Same order. The document was written for both.
 
 **Owner:** First Phase 0 developer.
 
-### Priority 3 — Docker compose + database baseline
+### Priority 2 — Docker compose + database baseline
 
 **Why now:** With the monorepo in place, the next blocker is having a runnable PostgreSQL+PostGIS, Redis, and MinIO. Without these, no integration tests can run.
 
 **What to do:**
 
-1. Create `docker/docker-compose.yml` per the spec in the original scaffold (postgres, redis, minio with named volumes, healthchecks).
+1. Create `docker/docker-compose.yml` (postgres+postgis, redis, minio with named volumes, healthchecks).
 2. In `apps/api/prisma/schema.prisma`, transcribe the entities defined in `dataModel.md` Phase 0+1 scope:
    - `Tenant`, `User`, `RefreshToken`, `Farm`, `FarmUserAssignment`, `Breed`, `Animal`, `BreedComposition`, `CowProfile`, `BullProfile`, `CalfProfile`, `WeightRecord`, `AnimalPhoto`, `AuditLog`, `Notification`.
-   - Use the exact column names, types, and constraints documented.
+   - Use the exact column names, types, and constraints documented (including the new enum values from v1.2).
 3. Run `prisma migrate dev --name init` to generate the first migration.
 4. Author `apps/api/prisma/seed.ts` with the 14 seeded breeds (12 named + Mestizo + Cruce per `dataModel.md` §5.1).
 5. Verify `pnpm prisma:generate && pnpm prisma:migrate && pnpm prisma:seed` work end-to-end against Docker postgres.
@@ -172,6 +165,23 @@ Same order. The document was written for both.
 **Estimated effort:** 1–2 days.
 
 **Owner:** First Phase 0 developer.
+
+### Priority 3 — Provision Railway staging environment
+
+**Why now:** Once the monorepo and schema are in place, having a deployed staging environment validates the deployment pipeline early. Railway makes this a same-day task once the project is wired up.
+
+**What to do:**
+
+1. Create a Railway project; provision PostgreSQL and Redis services.
+2. Wire the GitHub repo to Railway with auto-deploy on `develop`.
+3. Create a Cloudflare R2 bucket for animal photos; generate access keys.
+4. Configure environment variables on Railway: `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `COOKIE_SECRET`, `R2_*`, `CORS_ORIGIN`, etc.
+5. Verify `pnpm prisma migrate deploy` runs successfully on the staging database.
+6. Smoke test: a `GET /health` endpoint returns 200 from the deployed staging.
+
+**Estimated effort:** 0.5–1 day.
+
+**Owner:** DevOps / first Phase 0 developer.
 
 ---
 
@@ -181,26 +191,29 @@ Same order. The document was written for both.
 
 ### Open questions blocking Phase 0
 
-1. **Hosting target** — see Priority 1 above. **Blocks staging provision and the final shape of `deploy-staging.yml`.**
-2. **Email provider** — Resend / Postmark / SES. Not blocking Phase 0 but blocks Phase 2 completion. Decision can be deferred to early Phase 2.
+> **None remaining.** Hosting decision was resolved (see Recent decisions below). Phase 0 can proceed.
 
 ### Open questions not blocking Phase 0
 
-3. **Pricing tiers in COP** — needed for Phase 1 launch.
-4. **Payment processor** — needed for Phase 3 (MercadoPago for COP, Stripe international, both?).
-5. **Vet-facing landing page** — Phase 1 design decision.
-6. **Minimum supported Android version** — Phase 1 design decision.
-7. **Conflict resolution UX** — Phase 4.
-8. **Breed-composition UI shape** — Phase 1 design decision.
-9. **Pilot success manager** — Phase 1.
-10. **Open-source posture** — Year 2 decision.
-11. **Milking-mode switchability** — Phase 1 design decision (default per `dataModel.md`: locked once milk records exist).
-12. **Withholding catalog: built-in vs. tenant-editable** — Phase 2 product decision.
+1. **Email provider** — Resend / Postmark / SES. Blocks Phase 2 completion. Decision can be deferred to early Phase 2.
+2. **Pricing tiers in COP** — needed for Phase 1 launch.
+3. **Payment processor** — needed for Phase 3 (MercadoPago for COP, Stripe international, both?).
+4. **Vet-facing landing page** — Phase 1 design decision.
+5. **Minimum supported Android version** — Phase 1 design decision.
+6. **Conflict resolution UX** — Phase 4.
+7. **Breed-composition UI shape** — Phase 1 design decision.
+8. **Pilot success manager** — Phase 1.
+9. **Open-source posture** — Year 2 decision.
+10. **Milking-mode switchability** — Phase 1 design decision (default per `dataModel.md`: locked once milk records exist).
+11. **Withholding catalog: built-in vs. tenant-editable** — Phase 2 product decision.
 
 > All open questions also live in `projectbrief.md` §12 with their target-resolution phase. The list above is a snapshot for quick scanning.
 
 ### Recent decisions (kept here briefly until they fully integrate into the docs)
 
+- **2026-05-07 — Hosting target: Railway + Cloudflare R2** (ADR-023). Resolves `projectbrief.md` open question #2. Migration triggers documented in the ADR for revisiting when scale demands it.
+- **2026-05-07 — `CANCELLED_CORRECTION` is a formal `PregnancyOutcome` value** in `dataModel.md` §12.6. Used by REPRODUCTION.04 for record corrections; excluded from the post-adverse-event acknowledgement check.
+- **2026-05-07 — `ANIMAL_DEATH_LOSS` is a first-class `FinancialTransactionType`** in `dataModel.md` §12.8. Replaces the v1.1 `OTHER_EXPENSE + metadata.deathLoss` pattern. Cleaner reports; death losses are no longer hidden under "Other".
 - **2026-05-02 — `businessRules.md` is authoritative on domain matters.** When this document conflicts with code or with structural docs, `businessRules.md` wins. Documented as non-negotiable #11 in `projectbrief.md`.
 - **2026-05-02 — Default currency is COP.** `Tenant.defaultCurrency` defaults to `'COP'`; `Farm.currency` and `Animal.currency` inherit from tenant.
 - **2026-05-02 — Primary market is Colombia/LATAM.** Spanish-only UI in v1.0; Brazilian Portuguese pilot in Year 2.
